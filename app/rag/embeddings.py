@@ -1,10 +1,11 @@
+import hashlib
 import math
 import re
 from typing import List
 
 
 class EmbeddingModel:
-    """Embedding model wrapper supporting HuggingFace sentence-transformers and lightweight fallback."""
+    """Embedding model wrapper supporting HuggingFace sentence-transformers and deterministic fallback."""
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
         self.model_name = model_name
@@ -21,7 +22,7 @@ class EmbeddingModel:
             embeddings = self._model.encode(texts, convert_to_numpy=True)
             return embeddings.tolist()
 
-        # Pure python deterministic fallback vectorizer (hash-based TF-IDF proxy normalized)
+        # Deterministic fallback vectorizer (MD5 hash-based TF-IDF proxy normalized)
         return [self._fallback_embed(text) for text in texts]
 
     def embed_query(self, text: str) -> List[float]:
@@ -33,7 +34,9 @@ class EmbeddingModel:
         if not tokens:
             return vec
         for token in tokens:
-            idx = abs(hash(token)) % dim
+            # Use deterministic MD5 hash instead of python built-in hash() which varies per process
+            token_hash = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16)
+            idx = token_hash % dim
             vec[idx] += 1.0
 
         # L2 Normalize

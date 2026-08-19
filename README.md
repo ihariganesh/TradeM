@@ -1,6 +1,6 @@
 # Trading Research Assistant — TradeM
 
-> **Base model:** Plutus (Ollama, fine-tuned Llama 3.1 8B) · **Broker:** Kite / Upstox · **Dev:** Google Colab + Local (i5-12450HX, RTX 3050 6GB)
+> **Base model:** Plutus (Ollama, fine-tuned Llama 3.1 8B) · **Broker:** Angel One SmartAPI / Kite · **Dev:** Google Colab + Local (i5-12450HX, RTX 3050 6GB)
 
 ---
 
@@ -26,7 +26,7 @@ TradeM's job is **decision support with transparent reasoning**, not signal gene
    │  LIVE MARKET   │ │  RAG LAYER  │ │  BACKTEST   │ │  FINE-TUNED  │
    │  DATA MODULE   │ │ (news/books)│ │   ENGINE    │ │    PLUTUS    │
    │                │ │             │ │             │ │  (reasoning  │
-   │ Kite/Upstox API│ │ VectorStore │ │ NSE Options │ │  + output    │
+   │AngelOne / Kite │ │ VectorStore │ │ NSE Options │ │  + output    │
    │ → price, OI,   │ │ + embeddings│ │ Backtester  │ │  formatting) │
    │ IV, PCR, Greeks│ │             │ │             │ │              │
    └────────────────┘ └─────────────┘ └─────────────┘ └──────────────┘
@@ -47,8 +47,8 @@ TradeM's job is **decision support with transparent reasoning**, not signal gene
 
 ### Module Overview
 
-1. **Market Data Module (`app/market_data/`)**: Live prices, OHLC, volume, Option Chain (OI, IV, Greeks, PCR), support & resistance levels. Persistence via SQLite (`market_db`). Integrates KiteConnect with Mock fallback for development.
-2. **RAG Layer (`app/rag/`)**: Vector database with two speeds:
+1. **Market Data Module (`app/market_data/`)**: Live prices, OHLC, volume, Option Chain (OI, IV, Greeks, PCR), support & resistance levels. Persistence via SQLite (`market_db`). Primary integration: **Angel One SmartAPI** (TOTP authentication), secondary: KiteConnect, fallback: Mock provider.
+2. **RAG Layer (`app/rag/`)**: Vector database with SentenceTransformers (`bge-small-en-v1.5`) and deterministic MD5 fallback vectorizer:
    - **Static Corpus**: Books and strategy documents chunked (~500–800 tokens) and stored.
    - **Live News Corpus**: News articles tagged with timestamps and filtered with a **72-hour recency decay window**.
 3. **Backtest Engine (`app/backtest/`)**: Reuses NSE Options Backtester interface, computing Sharpe, Win Rate, Max Drawdown, Sample Size, and carrying the mandatory caveat (*"Short backtest windows yield unreliable Sharpe ratios"*).
@@ -72,18 +72,28 @@ cd TradeM
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
+# Install dependencies (packages finding configured for app & finetune)
 pip install -e .
 ```
 
-### 2. Running the FastAPI Server
+### 2. Configure Angel One SmartAPI Credentials (.env)
+
+Edit `.env` (derived from `.env.example`):
+```env
+ANGEL_API_KEY=your_api_key
+ANGEL_CLIENT_CODE=your_client_code
+ANGEL_PASSWORD=your_password
+ANGEL_TOTP_KEY=your_totp_key
+```
+
+### 3. Running the FastAPI Server
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Interactive API Documentation available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 3. Running Unit Tests
+### 4. Running Unit Tests
 
 ```bash
 pytest -v
@@ -98,20 +108,3 @@ pytest -v
 - `POST /rag/ingest/book`: Ingest static strategy book/document into vector store.
 - `POST /scanner/trigger`: Execute quantitative screens against watchlist and trigger alerts.
 - `GET /scanner/watchlist`: View active scanner watchlist.
-
----
-
-## 🧠 Google Colab Fine-Tuning Pipeline
-
-To fine-tune Plutus (Llama 3.1 8B) with **Unsloth QLoRA** on Google Colab (T4 VRAM 16GB):
-
-1. Run synthetic dataset generator:
-   ```bash
-   python finetune/dataset_prep.py
-   ```
-2. Upload `plutus_finetune_dataset.jsonl` to Google Drive.
-3. Open `finetune/colab_unsloth_training.py` in Google Colab and run the training steps.
-4. Export the resulting GGUF model and import it to Ollama:
-   ```bash
-   ollama create plutus:latest -f finetune/Modelfile
-   ```

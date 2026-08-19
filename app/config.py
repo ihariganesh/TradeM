@@ -21,7 +21,12 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "plutus:latest"
     LLM_TIMEOUT: float = 60.0
 
-    # Broker API Settings (Kite / Upstox)
+    # Broker API Settings (Angel One SmartAPI & Kite fallback)
+    ANGEL_API_KEY: str = ""
+    ANGEL_CLIENT_CODE: str = ""
+    ANGEL_PASSWORD: str = ""
+    ANGEL_TOTP_KEY: str = ""
+
     KITE_API_KEY: str = ""
     KITE_API_SECRET: str = ""
     KITE_ACCESS_TOKEN: str = ""
