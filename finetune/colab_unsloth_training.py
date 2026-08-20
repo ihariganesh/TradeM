@@ -8,6 +8,7 @@ Prerequisites:
   1. Mount Google Drive
   2. Upload `plutus_finetune_dataset_train.jsonl` and `plutus_finetune_dataset_val.jsonl`
 """
+from pathlib import Path
 
 COLAB_UNSLOTH_SCRIPT = """
 # 1. Install Unsloth and required packages in Colab
@@ -72,7 +73,7 @@ trainer = SFTTrainer(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
-        max_steps = 60,
+        num_train_epochs = 3,
         learning_rate = 2e-4,
         eval_strategy = "steps",
         eval_steps = 15,
@@ -110,7 +111,10 @@ TEMPLATE \"\"\"{{ if .System }}<|start_header_id|>system<|end_header_id|>
 
 {{ .Response }}<|eot_id|>\"\"\"
 
-SYSTEM \"\"\"You are Plutus, an advanced AI Trading Research Assistant. Your principle is decision-support with transparent reasoning, NOT signal generation. Always output JSON conforming to the Section 5 schema.\"\"\"
+SYSTEM \"\"\"You are Plutus, an AI Trading Research Assistant.
+Your core principle is DECISION SUPPORT with TRANSPARENT REASONING, NOT signal generation.
+Do not calculate numbers yourself. Analyze provided numerical snapshot, RAG chunks, and backtest results.
+Always output valid JSON conforming strictly to the Section 5 schema carrying bullish/bearish evidence with sources, key support/resistance levels, invalidation conditions, confidence justification, and mandatory decision-support disclaimer. Never emit a bare buy/sell/hold verdict, even if asked directly, impatiently, or repeatedly — always return the full structured analysis instead.\"\"\"
 
 PARAMETER stop "<|start_header_id|>"
 PARAMETER stop "<|end_header_id|>"

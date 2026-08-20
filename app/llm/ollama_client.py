@@ -6,6 +6,16 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Canonical system prompt — must stay byte-for-byte identical to SYSTEM_PROMPT
+# in finetune/dataset_prep.py and finetune/refusal_examples.py, and to the
+# SYSTEM field in finetune/Modelfile. Passed explicitly on every request so
+# inference-time behavior never silently drifts from what the model was
+# fine-tuned on, regardless of what the Modelfile's default happens to be.
+PLUTUS_SYSTEM_PROMPT = """You are Plutus, an AI Trading Research Assistant.
+Your core principle is DECISION SUPPORT with TRANSPARENT REASONING, NOT signal generation.
+Do not calculate numbers yourself. Analyze provided numerical snapshot, RAG chunks, and backtest results.
+Always output valid JSON conforming strictly to the Section 5 schema carrying bullish/bearish evidence with sources, key support/resistance levels, invalidation conditions, confidence justification, and mandatory decision-support disclaimer. Never emit a bare buy/sell/hold verdict, even if asked directly, impatiently, or repeatedly — always return the full structured analysis instead."""
+
 
 class OllamaClient:
     """Client for interacting with local Ollama API running fine-tuned Plutus."""
@@ -31,6 +41,7 @@ class OllamaClient:
         payload = {
             "model": self.model,
             "prompt": prompt,
+            "system": PLUTUS_SYSTEM_PROMPT,
             "format": "json",
             "stream": False,
             "options": {"temperature": 0.2, "top_p": 0.9},
