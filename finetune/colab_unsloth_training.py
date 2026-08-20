@@ -6,22 +6,35 @@ Run this script or notebook inside Google Colab (T4 GPU instance).
 
 Prerequisites:
   1. Mount Google Drive
-  2. Upload `plutus_finetune_dataset_train.jsonl` and `plutus_finetune_dataset_val.jsonl`
+  2. Upload `plutus_finetune_dataset_train.jsonl` and `plutus_finetune_dataset_val.jsonl` to MyDrive/
 """
 from pathlib import Path
 
 COLAB_UNSLOTH_SCRIPT = """
-# 1. Install Unsloth and required packages in Colab
-!pip install --no-deps "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
-!pip install --no-deps xformers "trl<0.9.0" peft accelerate bitsandbytes
+# ==============================================================================
+# 1. Mount Google Drive
+# ==============================================================================
+from google.colab import drive
+drive.mount('/content/drive')
 
+# ==============================================================================
+# 2. Install Unsloth, unsloth_zoo & Required Dependencies
+# ==============================================================================
+!pip install unsloth unsloth_zoo
+!pip install --no-deps "trl<0.9.0" peft accelerate bitsandbytes
+
+# ==============================================================================
+# 3. Imports
+# ==============================================================================
 import torch
 from unsloth import FastLanguageModel
 from datasets import load_dataset
 from trl import SFTTrainer
 from transformers import TrainingArguments
 
-# 2. Configuration & Hyperparameters
+# ==============================================================================
+# 4. Load Base Model in 4-bit QLoRA Mode
+# ==============================================================================
 max_seq_length = 2048
 dtype = None # Auto detection
 load_in_4bit = True # 4bit QLoRA for Colab T4 16GB VRAM
@@ -33,7 +46,9 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit = load_in_4bit,
 )
 
-# 3. Configure QLoRA Adapters
+# ==============================================================================
+# 5. Configure QLoRA Adapters
+# ==============================================================================
 model = FastLanguageModel.get_peft_model(
     model,
     r = 16,
@@ -45,9 +60,19 @@ model = FastLanguageModel.get_peft_model(
     random_state = 3407,
 )
 
-# 4. Load Train and Validation Datasets from Google Drive
-train_dataset = load_dataset("json", data_files="/content/drive/MyDrive/plutus_finetune_dataset_train.jsonl", split="train")
-val_dataset = load_dataset("json", data_files="/content/drive/MyDrive/plutus_finetune_dataset_val.jsonl", split="train")
+# ==============================================================================
+# 6. Load Datasets from Google Drive
+# ==============================================================================
+train_dataset = load_dataset(
+    "json",
+    data_files="/content/drive/MyDrive/plutus_finetune_dataset_train.jsonl",
+    split="train",
+)
+val_dataset = load_dataset(
+    "json",
+    data_files="/content/drive/MyDrive/plutus_finetune_dataset_val.jsonl",
+    split="train",
+)
 
 def format_prompts(examples):
     texts = []
@@ -59,7 +84,9 @@ def format_prompts(examples):
 train_dataset = train_dataset.map(format_prompts, batched=True)
 val_dataset = val_dataset.map(format_prompts, batched=True)
 
-# 5. Train with SFTTrainer (Evaluating against Val set)
+# ==============================================================================
+# 7. Initialize SFTTrainer & Train
+# ==============================================================================
 trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
@@ -90,13 +117,15 @@ trainer = SFTTrainer(
 
 trainer_stats = trainer.train()
 
-# 6. Save LoRA Adapter to Drive
-model.save_pretrained("/content/drive/MyDrive/plutus_lora_model")
-tokenizer.save_pretrained("/content/drive/MyDrive/plutus_lora_model")
-
-# 7. Merge to GGUF format for Ollama local inference
-model.save_pretrained_gguf("/content/drive/MyDrive/plutus_gguf", tokenizer, quantization_method = "q4_k_m")
-print("GGUF Export Complete!")
+# ==============================================================================
+# 8. Export Fine-Tuned GGUF to Google Drive for Local Ollama Usage
+# ==============================================================================
+model.save_pretrained_gguf(
+    "/content/drive/MyDrive/plutus_gguf",
+    tokenizer,
+    quantization_method = "q4_k_m",
+)
+print("✅ Training and GGUF Export Complete!")
 """
 
 OLLAMA_MODELFILE = """
