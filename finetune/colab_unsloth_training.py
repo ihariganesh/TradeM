@@ -21,7 +21,6 @@ drive.mount('/content/drive')
 # 2. Install Unsloth & Required Dependencies
 # ==============================================================================
 !pip install unsloth unsloth_zoo
-!pip install --no-deps "trl<0.9.0" peft accelerate bitsandbytes
 
 # ==============================================================================
 # 3. Imports
@@ -89,7 +88,7 @@ val_dataset = val_dataset.map(format_prompts, batched=True)
 # ==============================================================================
 trainer = SFTTrainer(
     model = model,
-    tokenizer = tokenizer,
+    processing_class = tokenizer,
     train_dataset = train_dataset,
     eval_dataset = val_dataset,
     dataset_text_field = "text",
