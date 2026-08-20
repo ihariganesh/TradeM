@@ -3,13 +3,18 @@ import glob
 import os
 import shutil
 import torch
-from unsloth import FastLanguageModel
+from google.colab import drive
 
-# 1. Clear GPU VRAM Memory Cache
+# 1. Ensure Google Drive is Mounted
+drive.mount('/content/drive')
+
+# 2. Clear GPU VRAM Memory Cache
 gc.collect()
 torch.cuda.empty_cache()
 
-# 2. Load trained checkpoint directly onto GPU
+# 3. Load trained checkpoint directly onto GPU
+from unsloth import FastLanguageModel
+
 print("1. Loading trained checkpoint onto GPU...")
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name="/content/drive/MyDrive/plutus_outputs/checkpoint-90",
@@ -19,7 +24,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     device_map="cuda:0",
 )
 
-# 3. Export GGUF locally
+# 4. Export GGUF locally
 print("2. Converting and exporting to GGUF format locally...")
 model.save_pretrained_gguf(
     "/content/plutus_export",
@@ -27,7 +32,7 @@ model.save_pretrained_gguf(
     quantization_method="q4_k_m",
 )
 
-# 4. Copy GGUF file to Google Drive
+# 5. Copy GGUF file to Google Drive
 print("3. Copying GGUF to Google Drive...")
 gguf_files = glob.glob("/content/**/*.gguf", recursive=True) + glob.glob(
     "/content/plutus_export/*.gguf"
