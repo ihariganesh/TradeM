@@ -89,7 +89,7 @@ val_dataset = val_dataset.map(format_prompts, batched=True)
 # ==============================================================================
 trainer = SFTTrainer(
     model = model,
-    processing_class = tokenizer,
+    tokenizer = tokenizer,
     train_dataset = train_dataset,
     eval_dataset = val_dataset,
     dataset_text_field = "text",
