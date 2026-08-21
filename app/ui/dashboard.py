@@ -85,11 +85,12 @@ with tab1:
 
     if st.button("Run Plutus Analysis", type="primary"):
         with st.spinner("Executing orchestrator pipeline (Market Snapshot + RAG 72h + Plutus Reasoning)..."):
-            analysis = orchestrator_service.analyze_request(
+            analysis_obj = orchestrator_service.analyze_symbol(
                 query=user_query,
                 symbol=selected_symbol,
                 instrument_type=instrument_type,
             )
+            analysis = analysis_obj.dict()
 
         # Snapshot KPIs
         curr = analysis.get("current_data", {})
@@ -97,7 +98,7 @@ with tab1:
         col1.metric("LTP (Last Traded Price)", f"₹{curr.get('ltp', 0.0)}")
         col2.metric("Put-Call Ratio (PCR)", curr.get("pcr", 1.0))
         col3.metric("Implied Volatility (IV)", f"{curr.get('iv', 20.0)}%")
-        col4.metric("OI Trend", curr.get("oi_trend", "neutral").upper())
+        col4.metric("OI Trend", str(curr.get("oi_trend", "neutral")).upper())
 
         st.markdown("---")
 
