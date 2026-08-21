@@ -15,7 +15,7 @@ from app.backtest.engine import backtest_engine
 from app.market_data.provider import market_provider
 from app.orchestrator.service import orchestrator_service
 from app.rag.rss_crawler import rss_crawler
-from app.rag.vector_store import rag_vector_store
+from app.rag.vector_store import vector_store
 from app.scanner.service import scanner_service
 
 # Page Configuration
@@ -211,7 +211,7 @@ with tab3:
 
     if st.button("Trigger Market Scan Now", type="primary"):
         with st.spinner("Running quantitative screens..."):
-            alerts = scanner_service.run_full_scan()
+            alerts = scanner_service.run_scan(orchestrator_service=orchestrator_service)
 
         st.success(f"Market Scan Complete! Found {len(alerts)} active alert triggers.")
 
@@ -280,6 +280,7 @@ with tab5:
         submitted = st.form_submit_button("Ingest into RAG Store")
 
         if submitted:
+            from app.rag.ingestion import ingest_news_article
             ingest_news_article(h_input, b_input, selected_symbol, source_input)
             st.success(f"Ingested article for {selected_symbol} into 72-hour RAG store!")
 
@@ -287,7 +288,7 @@ with tab5:
     st.markdown("### Inspect Vector Search Context")
     search_q = st.text_input("Search RAG Vector Store:", value=f"Options volatility and PCR support for {selected_symbol}")
     if st.button("Search Knowledge Base"):
-        results = rag_vector_store.search(search_q, top_k=5, filter_recency=True)
+        results = vector_store.retrieve(query=search_q, symbol=selected_symbol, k=5)
         st.write(f"Found {len(results)} recency-valid chunks (filtered within 72h window):")
         for r in results:
             st.json(r)
