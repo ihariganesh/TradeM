@@ -8,6 +8,7 @@ from app.config import settings
 from app.market_data.scheduler import refresh_watchlist_snapshots
 from app.orchestrator.service import orchestrator_service
 from app.rag.ingestion import ingest_news_article, ingest_static_document, seed_initial_knowledge_base
+from app.rag.rss_crawler import rss_crawler
 from app.scanner.service import scanner_service
 from app.schemas.analysis import SymbolAnalysisRequest, SymbolAnalysisResponse
 
@@ -25,8 +26,11 @@ async def lifespan(app: FastAPI):
     seed_initial_knowledge_base()
     # Refresh market snapshots
     refresh_watchlist_snapshots()
+    # Start automated RSS crawler background daemon
+    rss_crawler.start_background_crawler(interval_seconds=300)
     logger.info("TradeM ready.")
     yield
+    rss_crawler.stop_background_crawler()
     logger.info("Shutting down TradeM...")
 
 
@@ -87,9 +91,16 @@ def ingest_news(req: IngestNewsRequest):
         source=req.source,
     )
     return {
-        "message": f"Successfully ingested news article into RAG vector store.",
+        "message": "Successfully ingested news article into RAG vector store.",
         "chunks_created": num_chunks,
     }
+
+
+@app.post("/rag/crawl")
+def crawl_rss_feeds():
+    """Trigger on-demand crawl of financial RSS news feeds."""
+    result = rss_crawler.crawl_and_ingest_all()
+    return result
 
 
 class IngestBookRequest(BaseModel):
@@ -104,7 +115,7 @@ def ingest_book(req: IngestBookRequest):
         title=req.title, content=req.content, source=req.source
     )
     return {
-        "message": f"Successfully ingested static document into RAG vector store.",
+        "message": "Successfully ingested static document into RAG vector store.",
         "chunks_created": num_chunks,
     }
 

@@ -19,6 +19,9 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "sentence-transformers>=2.5.0",
     "pyotp>=2.9.0",
+    "streamlit>=1.32.0",
+    "plotly>=5.19.0",
+    "feedparser>=6.0.10",
 ]
 
 [project.optional-dependencies]
